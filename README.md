@@ -1,6 +1,6 @@
 # An Empirical Comparison of Parameter-Efficient Mitigation Strategies for Catastrophic Forgetting in Small LLMs under Compute-Constrained Continual Fine-Tuning
 
-**Author:** Vidit Sharma (vidit19sharma@gmail.com)
+**Author:** Gautam Dubey (gautamdubey296@gmail.com)
 
 ## Overview
 
@@ -26,7 +26,7 @@ We benchmark six continual fine-tuning methods on a four-task GLUE sequence
 ## Repo Layout
 
 ```
-Rpaper/
+RPaper/
 ├── paper/
 │   ├── main.tex                   # Top-level LaTeX document
 │   ├── refs.bib                   # BibTeX bibliography (25 entries)
@@ -47,6 +47,7 @@ Rpaper/
 │   ├── train.py                   # Per-task training loop
 │   ├── evaluate.py                # AA / F / BWT metric computation
 │   ├── run_experiments.py         # Experiment orchestrator (CLI)
+│   ├── make_figures.py            # Standalone plotting script
 │   └── colab_setup.ipynb          # End-to-end Colab notebook
 └── results/                       # JSON result files (git-ignored)
 ```
@@ -63,8 +64,8 @@ Cell 5 generates the three paper figures and saves them to `paper/figures/`.
 ## Local Reproduction
 
 ```bash
-git clone https://github.com/vidit19sharma/Rpaper.git
-cd Rpaper/code
+git clone https://github.com/gautamdubey-ethara/RPaper.git
+cd RPaper/code
 pip install -r requirements.txt
 
 # Run all methods for Qwen, seed 42
@@ -129,8 +130,8 @@ Each `results/{model}_{method}_{seed}.json` file contains:
 If you use this code or paper, please cite:
 
 ```bibtex
-@article{sharma2025mmr,
-  author  = {Sharma, Vidit},
+@article{dubey2025mmr,
+  author  = {Dubey, Gautam},
   title   = {An Empirical Comparison of Parameter-Efficient Mitigation Strategies
              for Catastrophic Forgetting in Small {LLM}s under Compute-Constrained
              Continual Fine-Tuning},
@@ -141,4 +142,4 @@ If you use this code or paper, please cite:
 
 ## License
 
-MIT License. Copyright (c) 2025 Vidit Sharma.
+MIT License. Copyright (c) 2025 Gautam Dubey.
