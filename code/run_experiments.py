@@ -58,6 +58,10 @@ def run_single_experiment(
     model, tokenizer = get_base_model(MODEL_IDS[model_key], quantize=quantize)
     if method != "full_ft":
         model = attach_lora(model)
+    else:
+        model.gradient_checkpointing_enable()
+        hparams = dict(hparams)
+        hparams["batch_size"] = 2
 
     K = len(TASK_SEQUENCE)
     R = np.zeros((K, K))
