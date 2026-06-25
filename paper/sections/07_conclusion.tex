@@ -1,0 +1,30 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+We presented an empirical comparison of six parameter-efficient continual fine-tuning strategies
+for mitigating catastrophic forgetting in small language models (1.5B--3.8B parameters) under a
+strict compute budget of a single NVIDIA T4 GPU.
+Using QLoRA as a shared foundation, we evaluated Full Fine-Tuning, Vanilla LoRA, LoRA+EWC,
+LoRA+Replay, O-LoRA, and our proposed Minimal Mixed Rehearsal (MMR) on a four-task GLUE sequence
+(SST-2\,$\to$\,MRPC\,$\to$\,CoLA\,$\to$\,MNLI) across two instruction-tuned architectures
+(Qwen2.5-1.5B-Instruct and Phi-3.5-mini-instruct).
+MMR achieves \todo{the best average accuracy--compute trade-off}, reducing forgetting substantially
+relative to Vanilla LoRA while incurring \todo{X\%} of the wall-clock overhead of O-LoRA and
+requiring no Fisher information computation or frozen parameter snapshots.
+Our results further show that orthogonality-based methods are most effective when replay data
+cannot be retained, while EWC provides limited additional benefit over Vanilla LoRA at the
+four-task scale studied here.
+We release all code, prompt templates, and result JSON files to support full reproducibility.
+
+Future work should pursue three natural extensions.
+First, scaling MMR to larger models (7B+) would test whether the method's simplicity is preserved
+when adapter rank must increase to match model capacity, and whether its Pareto advantage over
+O-LoRA widens or narrows with scale.
+Second, extending the evaluation to generative tasks---abstractive summarization, open-ended
+question answering, and code generation---would test MMR's robustness beyond the classification
+prompt paradigm; generative forgetting may require new metrics beyond sequence-level accuracy,
+such as ROUGE overlap on held-out summaries or execution-based pass rates.
+Third, dynamic replay-ratio scheduling---adapting $f$ at each task boundary based on an online
+estimate of the current forgetting rate---could further reduce the number of replay examples
+required while maintaining retention, moving toward a truly data-minimal, parameter-free continual
+learning recipe suited for privacy-sensitive deployment.

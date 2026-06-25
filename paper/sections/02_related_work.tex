@@ -1,0 +1,97 @@
+\section{Related Work}
+\label{sec:related}
+
+Catastrophic forgetting (CF), first characterized by~\cite{mccloskey1989catastrophic}, remains a
+fundamental obstacle to continual learning in neural networks: sequential gradient updates cause a
+model to overwrite previously acquired knowledge when it adapts to a new task distribution.
+With the rise of large language models (LLMs), CF has taken on renewed urgency; practitioners
+increasingly need to fine-tune pre-trained models on successive domain- or task-specific corpora
+without retaining all prior training data~\cite{luo2023empirical,li2024revisiting}.
+We organize the existing literature into four clusters.
+
+% Required packages (add to main.tex preamble if missing):
+%   \usepackage{booktabs}
+
+\subsection{Regularization-Based Methods}
+
+Regularization approaches penalize changes to model parameters that are deemed important for prior
+tasks.
+Elastic Weight Consolidation (EWC)~\cite{kirkpatrick2017overcoming} anchors each parameter to its
+post-training value with a quadratic penalty weighted by the diagonal of the empirical Fisher
+information matrix, providing a theoretically grounded stability--plasticity trade-off.
+While EWC is widely adopted as a baseline, its memory cost grows linearly with the number of tasks
+when the full Fisher diagonal must be stored, and the penalty strength $\lambda$ must be tuned
+per task sequence.
+Hierarchical regularization~\cite{song2025hierarchical} extends the EWC idea to transformer layers
+by assigning task-specific importance scores at different network depths, improving plasticity while
+preserving stability in cross-domain continual instruction tuning.
+Sharpness-aware minimization (SAM) has also been explored as an implicit regularizer that encourages
+convergence to flat minima, which generalize better under distribution shift, though its compute
+overhead is substantial.
+These methods share a common limitation: mispecification of the regularization strength leads to
+either underfitting (high stability, low plasticity) or catastrophic forgetting (low stability,
+high plasticity).
+
+\subsection{Rehearsal-Based Methods}
+
+Rehearsal approaches maintain a small episodic memory of prior-task examples and interleave them
+with current-task training.
+Experience Replay (ER) is the simplest instantiation~\cite{luo2023empirical}: a fixed-size buffer
+is populated uniformly from past data, and buffer samples are concatenated with each mini-batch.
+Structured Selective Replay (SSR)~\cite{huang2024ssr} improves upon na\"{i}ve ER by selecting which
+examples to retain based on gradient-space diversity, substantially reducing the buffer size required
+to achieve a given retention level.
+Mixed training~\cite{reynolds2025mixed} relaxes the strict sequential assumption by jointly sampling
+from the current task and all prior-task corpora at each step, effectively treating continual
+learning as multi-task learning with delayed data availability.
+Rehearsal methods are appealing because they impose no architectural constraints, but retaining prior
+data raises privacy and storage concerns in deployment contexts subject to data-use regulations.
+
+\subsection{Architectural and PEFT-Based Methods}
+
+Parameter-efficient fine-tuning (PEFT) methods reduce the number of trainable parameters, which
+naturally limits interference between tasks.
+LoRA~\cite{hu2021lora} constrains weight updates to a low-rank factorization
+$W + \Delta W = W + AB$, updating only $A \in \mathbb{R}^{d \times r}$ and
+$B \in \mathbb{R}^{r \times k}$ while freezing $W$.
+Orthogonal LoRA (O-LoRA)~\cite{wang2023olora} strengthens this by imposing an orthogonality
+constraint between the LoRA subspace learned for the current task and those of prior tasks,
+directly minimizing interference in parameter space without storing any training examples.
+CURLoRA~\cite{fawi2024curlora} applies CUR matrix decomposition to initialize adapter weights from
+prior tasks, leveraging structured low-rank approximations to reduce forgetting during sequential
+fine-tuning.
+N-LoRA~\cite{yang2024nlora} incorporates a null-space projection mechanism that updates parameters
+only in directions orthogonal to the gradient subspace of prior tasks, enforcing forward-transfer
+compatibility.
+GainLoRA~\cite{liang2025gainlora} introduces a gain-scaling reparameterization that modulates the
+effective rank of each adapter layer dynamically based on task-specific curvature estimates.
+SECURA~\cite{zhang2025secura} proposes a security-aware rehearsal framework that augments LoRA
+adapters with curriculum-guided memory consolidation to address both forgetting and adversarial
+robustness.
+A comprehensive comparative study~\cite{haque2025comparative} surveys many of these adapter-based
+continual learning strategies across diverse benchmarks, providing a useful reference for
+method selection in practice.
+
+\subsection{Compute-Efficient and Small-Model Studies}
+
+Despite the abundance of continual learning methods, most empirical studies are conducted at scale
+(7B+ parameters) with ample GPU resources, often training on high-memory A100 or H100 hardware.
+The interaction between quantization, low-rank adaptation, and forgetting at the 1--4B parameter
+scale remains poorly characterized.
+QLoRA~\cite{dettmers2023qlora} demonstrated that 4-bit NF4 quantization with LoRA adapters trained
+in \texttt{bfloat16} matches full-precision fine-tuning quality on \emph{static} tasks, but its
+behavior under sequential task shifts has not been systematically evaluated.
+Post-training continual adaptation~\cite{kumar2025posttraining} examines lightweight fine-tuning
+strategies for already-instruction-tuned models but focuses on single-task adaptation rather than
+multi-task sequences.
+A broader survey~\cite{nayak2025sculpting} explores sculpting approaches for controlled knowledge
+editing in LLMs, highlighting the need for methods that can operate within tight memory budgets.
+
+\paragraph{Gap addressed by this work.}
+No prior study directly compares rehearsal-based, regularization-based, and orthogonality-based
+PEFT strategies for catastrophic forgetting mitigation under the strict compute budget of a single
+commodity GPU (NVIDIA T4, 16\,GB) using 4-bit quantized small LLMs ($\leq$4B parameters) on a
+standardized GLUE task sequence.
+We fill this gap by benchmarking six methods---including our proposed Minimal Mixed Rehearsal
+(MMR)---under identical hardware and hyperparameter constraints, providing actionable guidance for
+practitioners operating in low-resource continual fine-tuning scenarios.

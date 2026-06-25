@@ -1,0 +1,75 @@
+% =====================================================================
+% An Empirical Comparison of Parameter-Efficient Mitigation Strategies
+% for Catastrophic Forgetting in Small LLMs under Compute-Constrained
+% Continual Fine-Tuning
+%
+% IEEE Conference template (IEEEtran, 2-column, conference mode)
+% Build: pdflatex main && bibtex main && pdflatex main && pdflatex main
+% =====================================================================
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% ---------- Packages ----------
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+
+% ---------- Macros ----------
+\newcommand{\method}[1]{\textsc{#1}}
+\newcommand{\dataset}[1]{\textsc{#1}}
+\newcommand{\mmr}{\textsc{MMR}}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{An Empirical Comparison of Parameter-Efficient Mitigation\\
+Strategies for Catastrophic Forgetting in Small LLMs under\\
+Compute-Constrained Continual Fine-Tuning}
+
+\author{
+\IEEEauthorblockN{Gautam Dubey}
+\IEEEauthorblockA{Department of Computer Science \& Engineering\\
+\todo{Medicaps University}\\
+\todo{Indore, India}\\
+Email: gautamdubey296@gmail.com}
+}
+
+\maketitle
+
+% ---------- Abstract ----------
+\input{sections/00_abstract}
+
+\begin{IEEEkeywords}
+catastrophic forgetting, continual learning, large language models,
+parameter-efficient fine-tuning, LoRA, QLoRA, rehearsal
+\end{IEEEkeywords}
+
+% ---------- Body ----------
+\input{sections/01_introduction}
+\input{sections/02_related_work}
+\input{sections/03_methodology}
+\input{sections/04_experimental_setup}
+\input{sections/05_results}
+\input{sections/06_discussion}
+\input{sections/07_conclusion}
+
+% ---------- References ----------
+\bibliographystyle{IEEEtran}
+\bibliography{refs}
+
+\end{document}

@@ -1,0 +1,28 @@
+\begin{abstract}
+Catastrophic forgetting (CF) remains a central obstacle to deploying
+Large Language Models (LLMs) in settings where new tasks arrive
+sequentially. While recent work has produced a broad zoo of
+mitigation strategies---ranging from elastic-weight regularization
+and experience replay to orthogonal low-rank adapters---almost all
+evaluations are performed on 7B--13B-parameter models trained on
+data-center-grade hardware. In this work we ask a different but
+equally important question: \emph{which mitigation strategies remain
+effective when the practitioner is restricted to a sub-2B parameter
+model and a single free-tier GPU?} We present a systematic empirical
+comparison of six representative strategies---full fine-tuning,
+vanilla LoRA, LoRA with Elastic Weight Consolidation (EWC),
+LoRA with Experience Replay, Orthogonal LoRA (O-LoRA), and a
+\emph{Minimal Mixed Rehearsal} (MMR) recipe we formalize from a
+recent empirical observation---applied to Qwen2.5-1.5B-Instruct and
+Phi-3.5-mini-instruct across a four-task sequence drawn from GLUE
+(SST-2 $\rightarrow$ MRPC $\rightarrow$ CoLA $\rightarrow$ MNLI).
+All experiments are run under QLoRA 4-bit quantization on a single
+NVIDIA T4. We report Average Accuracy, Forgetting, Backward Transfer,
+wall-clock training time, and peak GPU memory, and visualize the
+resulting accuracy/compute trade-off as a Pareto frontier.
+Our results show that \todo{insert one-sentence headline finding once
+results are in}, and that MMR with a replay fraction as low as
+\todo{X\%} matches or exceeds heavier methods while incurring
+negligible additional compute. We release all code, configurations,
+and run logs to enable reproduction on free-tier hardware.
+\end{abstract}

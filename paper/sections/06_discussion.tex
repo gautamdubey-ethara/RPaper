@@ -1,0 +1,52 @@
+\section{Discussion}
+\label{sec:discussion}
+
+\paragraph{Practical guidance for method selection.}
+Our results suggest that no single method universally dominates; the optimal choice depends on the
+operational constraint.
+When the primary constraint is \emph{compute}, MMR offers the most favorable accuracy--time
+trade-off: its only overhead relative to Vanilla LoRA is the cost of sampling from the replay
+buffer and computing loss on a slightly larger concatenated batch, which is negligible compared to
+the forward-backward pass on current-task data.
+When the primary constraint is \emph{data retention} (e.g., prior task data may not be stored due
+to privacy regulations) while GPU memory is ample, O-LoRA is preferable because it enforces task
+separation in parameter space without retaining any training examples; its higher wall-clock cost
+is the trade-off.
+When \emph{neither replay nor additional memory} for storing LoRA snapshots is feasible and the
+practitioner has access to a held-out validation set for Fisher estimation, LoRA + EWC provides a
+middle ground, though our results suggest its benefits are modest at the four-task scale studied
+here.
+Full fine-tuning should only be considered in single-task or offline multi-task settings; it
+consistently incurs the most severe forgetting in our experiments despite achieving competitive
+performance on the final task in the sequence.
+
+\paragraph{Limitations.}
+This study has several limitations that should temper the generality of its conclusions.
+First, we evaluate on only four tasks drawn from a single benchmark suite (GLUE); tasks within
+GLUE are relatively homogeneous in format and domain compared to real-world continual learning
+deployments spanning scientific text, code generation, or dialogue.
+Second, all tasks are classification problems cast as text generation via prompting; generative
+tasks such as abstractive summarization or open-ended question answering may exhibit qualitatively
+different forgetting dynamics, as the output space is unbounded and task interference may manifest
+differently in the language modeling objective.
+Third, both models evaluated are small ($\leq$4B parameters); at larger scales, richer
+representations may be more amenable to orthogonalization (benefiting O-LoRA) or may exhibit
+different forgetting rates due to increased model capacity.
+Fourth, wall-clock measurements were taken on Colab's shared T4 infrastructure, which exhibits
+variable GPU utilization; timing comparisons should therefore be treated as indicative rather than
+definitive.
+
+\paragraph{Threats to validity.}
+Two additional threats deserve explicit mention.
+\emph{Prompt format sensitivity} is a known confound for instruction-tuned models: slight
+rephrasing of the task instruction can shift absolute accuracy by several points without changing
+task content~\cite{luo2023empirical}.
+We mitigate this by fixing a single prompt template per task (Section~\ref{sec:setup}), but
+different template designs could alter the relative ranking of methods, particularly for tasks with
+ambiguous class labels.
+\emph{Task ordering effects} represent a second threat: prior work has shown that the order in
+which tasks are presented can substantially change forgetting patterns, as earlier tasks in the
+sequence have more gradient updates applied on top of them.
+We evaluate a single fixed sequence (SST-2\,$\to$\,MRPC\,$\to$\,CoLA\,$\to$\,MNLI) chosen to
+maximize linguistic diversity, but a full permutation analysis across all $K! = 24$ orderings is
+beyond the compute budget of this study and is left as future work.

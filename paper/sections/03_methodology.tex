@@ -1,0 +1,161 @@
+% Required packages (add to main.tex preamble if not already present):
+%   \usepackage{amsmath}
+%   \usepackage{algorithm}
+%   \usepackage{algorithmic}
+%   \usepackage{booktabs}
+
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Problem Formulation}
+
+We consider a continual fine-tuning setting with $K$ tasks arriving sequentially.
+Let $\mathcal{T} = \{T_1, T_2, \ldots, T_K\}$ denote the task sequence, where each task $T_k$ is
+defined by a training set $\mathcal{D}_k^{\mathrm{train}}$ and an evaluation set
+$\mathcal{D}_k^{\mathrm{val}}$.
+A shared language model $f_\theta$ parameterized by $\theta$ is adapted to each task in order; upon
+receiving $T_k$, the model may only access $\mathcal{D}_k^{\mathrm{train}}$ and, for rehearsal
+methods, a bounded memory buffer $\mathcal{M}$ populated from prior tasks.
+After training on the full sequence, let $R[i,j]$ denote the evaluation metric of the model on task
+$T_j$ immediately after training on task $T_i$ ($i \geq j$), forming the $K \times K$
+\emph{performance matrix} $R$.
+
+\paragraph{Evaluation metrics.}
+Three continual learning metrics are derived from $R$:
+\begin{align}
+  \mathrm{AA}  &= \frac{1}{K}   \sum_{j=1}^{K}
+                   R[K,\,j],
+                   \label{eq:aa} \\
+  \mathrm{F}   &= \frac{1}{K-1} \sum_{j=1}^{K-1}
+                   \Bigl(\max_{i \leq K-1} R[i,\,j] - R[K,\,j]\Bigr),
+                   \label{eq:forgetting} \\
+  \mathrm{BWT} &= \frac{1}{K-1} \sum_{j=1}^{K-1}
+                   \bigl(R[K,\,j] - R[j,\,j]\bigr).
+                   \label{eq:bwt}
+\end{align}
+Average Accuracy (AA) measures final performance across all tasks (Eq.~\ref{eq:aa}).
+Forgetting (F) quantifies the mean drop from peak performance to final performance on each past
+task; lower is better (Eq.~\ref{eq:forgetting}).
+Backward Transfer (BWT) captures whether learning later tasks helps or hurts earlier ones; positive
+BWT indicates beneficial transfer (Eq.~\ref{eq:bwt}).
+
+\subsection{Baselines}
+
+\paragraph{Full Fine-Tuning (Full-FT).}
+All model parameters $\theta$ are updated on each task in sequence with no continual learning
+mechanism.
+Full-FT establishes an upper bound on single-task performance and a lower bound on retention of
+prior tasks; it serves as the na\"{i}ve baseline.
+
+\paragraph{Vanilla LoRA.}
+A single shared LoRA adapter $(A, B)$ is trained across the entire task sequence, with the backbone
+frozen.
+No mechanism prevents interference between task-specific gradient updates; this represents the
+minimal PEFT baseline and quantifies the forgetting attributable to sequential adapter training
+alone.
+
+\paragraph{LoRA + EWC.}
+Elastic Weight Consolidation~\cite{kirkpatrick2017overcoming} augments the per-task loss with a
+quadratic penalty that resists deviation of trainable parameters from their values at the end of
+the previous task:
+\begin{equation}
+  \mathcal{L}_{\mathrm{EWC}}(\theta)
+    = \mathcal{L}_k(\theta)
+    + \frac{\lambda}{2} \sum_{i}
+        \hat{F}_i \bigl(\theta_i - \theta_i^*\bigr)^2,
+  \label{eq:ewc}
+\end{equation}
+where $\hat{F}_i$ is the $i$-th diagonal element of the empirical Fisher information matrix
+computed over a held-out subset of $\mathcal{D}_{k-1}^{\mathrm{train}}$, $\theta^*$ are the
+adapter parameters after training on $T_{k-1}$, and $\lambda > 0$ is a task-independent scaling
+coefficient.
+Only LoRA adapter parameters participate in the EWC penalty; the frozen backbone is excluded.
+
+\paragraph{LoRA + Replay (ER).}
+A fixed-size episodic buffer $\mathcal{M}$ stores a random subset of examples from each completed
+task.
+At each training step on $T_k$, a mini-batch is formed by concatenating examples from
+$\mathcal{D}_k^{\mathrm{train}}$ with a uniform sample from $\mathcal{M}$.
+No regularization term is added; this method isolates the effect of raw rehearsal.
+
+\paragraph{O-LoRA.}
+Orthogonal LoRA~\cite{wang2023olora} learns task-$k$ adapters in the subspace orthogonal to all
+prior tasks by minimizing
+\begin{equation}
+  \mathcal{L}_{\mathrm{O\text{-}LoRA}}(\theta)
+    = \mathcal{L}_k(\theta)
+    + \mu \sum_{j < k} \left\| A_k^\top A_j \right\|_F^2,
+  \label{eq:olora}
+\end{equation}
+where $A_k, A_j \in \mathbb{R}^{d \times r}$ are the LoRA $A$-matrices for tasks $k$ and $j$
+respectively, and $\mu > 0$ controls orthogonality strength.
+The prior-task matrices $A_j$ are frozen after their respective tasks complete and stored for use
+in subsequent penalty computations.
+
+\subsection{Minimal Mixed Rehearsal (MMR)}
+\label{sec:mmr}
+
+We propose \textbf{Minimal Mixed Rehearsal (MMR)}, a conceptually simple strategy that combines
+experience replay with QLoRA's parameter efficiency without any additional regularization or
+architectural constraints.
+The central design choice is a small \emph{replay ratio} $f \in (0,1)$: at each optimization step,
+a fraction $f$ of the mini-batch is drawn from the replay buffer $\mathcal{M}$ and the remaining
+$(1-f)$ from the current task.
+After completing task $T_k$, exactly $B$ examples are sampled uniformly from
+$\mathcal{D}_k^{\mathrm{train}}$ and appended to $\mathcal{M}$.
+
+Algorithm~\ref{alg:mmr} provides a complete specification of MMR.
+
+\begin{algorithm}[t]
+\caption{Minimal Mixed Rehearsal (MMR)}
+\label{alg:mmr}
+\begin{algorithmic}[1]
+\REQUIRE Model $\theta$, task sequence $\{T_1,\ldots,T_K\}$, replay ratio $f \in (0,1)$,
+         buffer capacity $B$ per task, mini-batch size $M$, learning rate $\eta$
+\ENSURE  Trained model $\theta$
+\STATE Initialize replay buffer $\mathcal{M} \leftarrow \emptyset$
+\FOR{$k = 1$ \textbf{to} $K$}
+  \STATE $n_{\mathrm{replay}} \leftarrow \lfloor f \cdot M \rfloor$;\quad
+         $n_{\mathrm{curr}}   \leftarrow M - n_{\mathrm{replay}}$
+  \FOR{each mini-batch $\mathbf{b}_{\mathrm{curr}} \sim \mathcal{D}_k^{\mathrm{train}}$
+       of size $n_{\mathrm{curr}}$}
+    \IF{$|\mathcal{M}| > 0$}
+      \STATE $\mathbf{b}_{\mathrm{replay}} \sim \mathcal{M}$,\quad size $n_{\mathrm{replay}}$
+      \STATE $\mathbf{b} \leftarrow \mathbf{b}_{\mathrm{curr}} \,\|\,
+             \mathbf{b}_{\mathrm{replay}}$ \COMMENT{Concatenate batches}
+    \ELSE
+      \STATE $\mathbf{b} \leftarrow \mathbf{b}_{\mathrm{curr}}$
+    \ENDIF
+    \STATE $\theta \leftarrow \theta - \eta\,\nabla_\theta\,\mathcal{L}(\theta;\,\mathbf{b})$
+  \ENDFOR
+  \STATE $\mathcal{M} \leftarrow \mathcal{M} \cup
+         \mathrm{UniformSample}(\mathcal{D}_k^{\mathrm{train}},\,B)$
+         \COMMENT{Buffer update}
+\ENDFOR
+\RETURN $\theta$
+\end{algorithmic}
+\end{algorithm}
+
+MMR introduces \emph{no new trainable parameters} and requires no Fisher information computation.
+Its memory overhead is $O(K \cdot B)$ stored examples, which is negligible when $B \ll
+|\mathcal{D}_k^{\mathrm{train}}|$.
+The replay ratio $f$ is the sole additional hyperparameter; we study its sensitivity in
+Section~\ref{sec:results}.
+Compared with LoRA + Replay (ER), MMR differs in enforcing a strict fraction-based mixing policy
+at every step (rather than concatenating full buffer batches), which produces a more controlled
+trade-off between current-task loss and retention loss.
+
+\subsection{Implementation under QLoRA}
+
+All methods are implemented within the QLoRA~\cite{dettmers2023qlora} framework.
+The backbone is loaded in 4-bit NF4 precision using \texttt{BitsAndBytesConfig} from the
+\texttt{bitsandbytes} library, with \texttt{bfloat16} as the compute dtype to leverage Tensor Core
+throughput on the NVIDIA T4.
+We use the \texttt{paged\_adamw\_8bit} optimizer, which pages optimizer states to CPU when GPU
+memory is exhausted, enabling training within the 16\,GB budget.
+LoRA adapters are attached to all four attention projection matrices
+(\texttt{q\_proj}, \texttt{k\_proj}, \texttt{v\_proj}, \texttt{o\_proj}) with rank $r{=}16$,
+scaling $\alpha{=}32$, and dropout $p{=}0.05$.
+For O-LoRA, we additionally store the frozen $A$-matrices from each completed task to compute the
+orthogonality penalty in Eq.~\ref{eq:olora}.
+PEFT model management uses the \texttt{peft} library~\cite{mangrulkar2022peft}.

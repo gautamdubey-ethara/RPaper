@@ -1,0 +1,98 @@
+% Required packages (add to main.tex preamble if not already present):
+%   \usepackage{booktabs}
+
+\section{Experimental Setup}
+\label{sec:setup}
+
+\subsection{Datasets}
+
+We adopt four classification benchmarks from GLUE~\cite{wang2018glue}, chosen to cover diverse
+linguistic phenomena and to stress-test forgetting across syntactically and semantically distinct
+tasks.
+
+\paragraph{SST-2} (Stanford Sentiment Treebank~\cite{socher2013sst}) is a binary sentiment
+classification task over single movie-review sentences.
+The full training set contains 67{,}349 examples; we report accuracy on the official validation
+split (872 examples).
+
+\paragraph{MRPC} (Microsoft Research Paraphrase Corpus~\cite{dolan2005mrpc}) is a paraphrase
+detection task over sentence pairs drawn from online news articles.
+The full training set contains 3{,}668 sentence pairs; we report macro-F1 on the validation
+split (408 examples).
+
+\paragraph{CoLA} (Corpus of Linguistic Acceptability~\cite{warstadt2019cola}) requires binary
+classification of whether an English sentence is grammatically acceptable.
+The full training set contains 8{,}551 examples; we report Matthews Correlation Coefficient (MCC)
+on the validation split (1{,}043 examples).
+
+\paragraph{MNLI} (Multi-Genre Natural Language Inference~\cite{williams2018mnli}) is a three-class
+entailment task (entailment / neutral / contradiction) over premise--hypothesis pairs spanning
+multiple genres.
+The full training set contains 392{,}702 examples; we use the \emph{matched} validation split for
+evaluation and report accuracy.
+
+For all tasks we uniformly cap training at $N_{\mathrm{train}} = 2{,}000$ examples per task to
+ensure each full continual learning run completes within a single Colab T4 session; the cap is
+binding only for SST-2 and MNLI, while MRPC and CoLA use their full training sets.
+The task sequence order is fixed as SST-2\,$\to$\,MRPC\,$\to$\,CoLA\,$\to$\,MNLI ($K = 4$).
+
+\subsection{Models}
+
+We evaluate two instruction-tuned small LLMs.
+
+\paragraph{Qwen2.5-1.5B-Instruct}~\cite{qwen2024} is a 1.5-billion parameter chat model from the
+Qwen2.5 family.
+Its small footprint permits multiple experimental runs---including full ablation sweeps---within the
+Colab memory budget, making it the primary model for all six methods and all ablations.
+
+\paragraph{Phi-3.5-mini-instruct}~\cite{abdin2024phi3} is a 3.8-billion parameter model from
+Microsoft's Phi series.
+We include it to test whether findings generalize beyond the Qwen architecture, running only the
+main six-method comparison (not ablations) due to its larger memory footprint.
+
+Both models use instruction-following chat templates, enabling uniform prompt-based task formatting
+across methods.
+Both are released under permissive licenses (Apache~2.0 and MIT, respectively) that explicitly
+permit fine-tuning for research purposes.
+
+\subsection{Hyperparameters}
+
+Table~\ref{tab:hparams} lists all fixed hyperparameters used across every method and seed.
+Method-specific coefficients ($\lambda$, $B$, $\mu$, $f$) were set to literature-consistent
+defaults; we examine the sensitivity of MMR to its replay ratio $f$ in
+Section~\ref{sec:results}.
+
+\begin{table}[h]
+\centering
+\caption{Hyperparameters used across all experiments.}
+\label{tab:hparams}
+\begin{tabular}{ll}
+\toprule
+\textbf{Hyperparameter}               & \textbf{Value}                \\
+\midrule
+Learning rate                         & $2 \times 10^{-4}$            \\
+Effective batch size                  & 8                             \\
+Maximum sequence length               & 256 tokens                    \\
+Epochs per task                       & 2                             \\
+Optimizer                             & \texttt{paged\_adamw\_8bit}   \\
+LoRA rank $r$                         & 16                            \\
+LoRA scaling $\alpha$                 & 32                            \\
+LoRA dropout                          & 0.05                          \\
+Target modules                        & \texttt{q,k,v,o\_proj}        \\
+EWC coefficient $\lambda$             & $500$                         \\
+Replay buffer size $B$ (per task)     & $200$ examples                \\
+O-LoRA orthogonality coeff.\ $\mu$    & $0.1$                         \\
+MMR replay ratio $f$                  & $0.06$                        \\
+Random seeds                          & 42, 123, 2025                 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Hardware and Reproducibility}
+
+All experiments are run on an NVIDIA T4 GPU (16\,GB VRAM) via Google Colab free tier.
+We fix random seeds $\{42, 123, 2025\}$ and report means and standard deviations across the three
+runs.
+Wall-clock time is measured with \texttt{time.time()} surrounding the training loop; peak GPU
+memory is recorded with \texttt{torch.cuda.max\_memory\_allocated()} immediately after training.
+Code, prompts, and result JSON files are available at \todo{\texttt{https://github.com/vidit19sharma/...}}.

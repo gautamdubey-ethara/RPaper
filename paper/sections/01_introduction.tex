@@ -1,0 +1,78 @@
+\section{Introduction}
+\label{sec:introduction}
+
+Large Language Models (LLMs) have become the default substrate for
+modern natural language processing, but the prevailing usage pattern
+treats each fine-tuned model as a single static artifact. In
+practice, downstream tasks rarely arrive simultaneously: a model
+deployed in a research group, startup, or product team is repeatedly
+asked to acquire \emph{new} capabilities (a new domain, a new
+language, a new instruction style) without losing the capabilities it
+already possesses. This is the classical setting of
+\emph{continual learning}, and the failure mode it exposes---a sharp
+collapse in performance on previously mastered tasks the moment a new
+task is introduced---is \emph{catastrophic forgetting} (CF)
+\cite{mccloskey1989catastrophic,luo2023empirical}.
+
+The recent CF-mitigation literature for LLMs is wide and
+fast-moving. Regularization-based methods penalize movement of
+important parameters \cite{kirkpatrick2017overcoming,li2024revisiting,song2025hierarchical};
+rehearsal-based methods reintroduce data
+from earlier tasks during current-task training \cite{huang2024ssr,reynolds2025mixed};
+architectural and PEFT-based methods isolate
+task-specific knowledge in dedicated low-rank subspaces
+\cite{hu2021lora,wang2023olora,fawi2024curlora,nayak2025sculpting}.
+Despite the breadth of techniques, the experimental setting in which
+they are typically validated is remarkably homogeneous: a
+$\geq$7B-parameter base model, an A100-class GPU, and large
+fine-tuning budgets. The resulting body of evidence is largely
+silent on the regime that most students, independent researchers,
+and small teams actually inhabit: a sub-2B-parameter base model and a
+single free-tier GPU (e.g.\ an NVIDIA T4 on Colab or Kaggle).
+
+This work fills that gap. We perform a controlled empirical
+comparison of six representative CF-mitigation strategies on small,
+publicly available instruction-tuned LLMs under a strict
+free-tier compute envelope. Concretely, we make the following
+contributions:
+
+\begin{itemize}
+    \item We establish a reproducible \emph{small-model,
+    free-tier} benchmark for CF on a four-task sequence drawn from
+    GLUE (SST-2 $\rightarrow$ MRPC $\rightarrow$ CoLA $\rightarrow$
+    MNLI), with all six methods implemented uniformly on top of
+    QLoRA 4-bit fine-tuning.
+
+    \item We formalize \emph{Minimal Mixed Rehearsal} (MMR), a simple
+    rehearsal recipe that retains only a small fraction
+    ($\sim$\todo{$f\%$}) of each earlier task's training set and
+    interleaves it with the current task at every optimization step.
+    The recipe is parameter-free at inference time and adds
+    negligible memory and wall-clock overhead.
+
+    \item We report not only the standard continual-learning metrics
+    (Average Accuracy, Forgetting, Backward Transfer) but also
+    \emph{wall-clock training time} and \emph{peak GPU memory}, and
+    visualize the resulting accuracy/compute trade-off as a Pareto
+    frontier. This compute-aware view is, to our knowledge, missing
+    from existing comparative CF studies.
+
+    \item Across both Qwen2.5-1.5B-Instruct and Phi-3.5-mini-instruct,
+    we observe that
+    \todo{state the headline empirical finding once results are in,
+    e.g.\ ``MMR matches O-LoRA in average accuracy while reducing
+    training time by X\%''}.
+
+    \item We release code, configurations, and run logs to enable
+    end-to-end reproduction of every reported number on a single
+    Colab T4 session.
+\end{itemize}
+
+The remainder of the paper is organized as follows.
+Section~\ref{sec:related} situates our work in the existing CF
+literature. Section~\ref{sec:method} introduces our notation,
+formalizes each comparison method, and presents MMR.
+Section~\ref{sec:setup} details the experimental protocol.
+Section~\ref{sec:results} reports our main empirical results.
+Section~\ref{sec:discussion} draws practical guidance from the
+findings, and Section~\ref{sec:conclusion} concludes.
