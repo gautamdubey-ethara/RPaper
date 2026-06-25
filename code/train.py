@@ -71,6 +71,9 @@ def evaluate_task(
     all_preds: List[int] = []
     all_labels: List[int] = []
 
+    original_padding_side = tokenizer.padding_side
+    tokenizer.padding_side = "left"
+
     for i in range(0, len(val_ds), batch_size):
         batch = val_ds[i: i + batch_size]
         prompts = batch["prompt"] if isinstance(batch["prompt"], list) else [batch["prompt"]]
@@ -102,6 +105,7 @@ def evaluate_task(
             all_preds.append(pred)
             all_labels.append(int(true_labels[j]))
 
+    tokenizer.padding_side = original_padding_side
     return task_metric(all_preds, all_labels, task_name)
 
 
