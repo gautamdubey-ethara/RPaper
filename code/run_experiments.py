@@ -148,6 +148,11 @@ def main(argv: List[str] | None = None) -> None:
                 print(f"  Skipping {out_path} (already exists)")
                 continue
             run_single_experiment(args.model, method, seed, hparams, output_dir)
+            import gc
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
 
 
 if __name__ == "__main__":
